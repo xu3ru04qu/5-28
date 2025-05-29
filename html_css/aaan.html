@@ -1,3 +1,101 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bbb01b426193393e57e0fe776d4240ec9e3800edb538b760c33ca2d81e1587fb
-size 2955
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毛筆書法模擬小遊戲（真實筆壓）</title>
+  <style>
+    body {
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
+    }
+    canvas {
+      border: 1px solid #ccc;
+      touch-action: none; /* 禁用預設觸控行為 */
+      margin-top: 20px;
+    }
+    #btn-save, #btn-clear {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    #btn-save:hover, #btn-clear:hover {
+      background-color: #45a049;
+    }
+    #size-slider {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>毛筆書法模擬</h2>
+  <img src="image\ann.jpg" height="100" width="100" alt="100">
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <label for="size-slider">最大筆粗：</label>
+  <input type="range" id="size-slider" min="2" max="30" value="10">
+  <div>
+    <button id="btn-save">儲存圖片</button>
+    <button id="btn-clear">清空畫布</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const sizeSlider = document.getElementById('size-slider');
+
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
+
+    canvas.addEventListener('pointerdown', (e) => {
+      isDrawing = true;
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return;
+
+      const pressure = e.pressure || 0.5; // 真實筆壓，滑鼠時為 0.5
+      const size = parseFloat(sizeSlider.value) * pressure;
+
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = size;
+
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+
+      [lastX, lastY] = [e.offsetX, e.offsetY];
+    });
+
+    const stopDraw = () => isDrawing = false;
+    canvas.addEventListener('pointerup', stopDraw);
+    canvas.addEventListener('pointerout', stopDraw);
+    canvas.addEventListener('pointercancel', stopDraw);
+
+    document.getElementById('btn-save').addEventListener('click', () => {
+      const link = document.createElement('a');
+      link.download = 'calligraphy.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    });
+  </script>
+  <ul class="button-list"></ul>
+  <li><a href="aaan copy.html">下一頁</a></li>
+</body>
+</html>
