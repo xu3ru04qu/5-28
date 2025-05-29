@@ -1,157 +1,101 @@
-<!DOCTYPE html> <!-- 告訴瀏覽器這是 HTML5 文件 -->
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" /> <!-- 設定編碼為 UTF-8，支援中文顯示 -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <!-- 響應式設計設定 -->
-  <title>模擬書法小遊戲</title> <!-- 頁面標題 -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>毛筆書法模擬小遊戲（真實筆壓）</title>
   <style>
-    /* 基本樣式設定 */
     body {
-      margin: 0; /* 沒有邊界空白  */
-      display: flex; 
-      flex-direction: column; /* 垂直排列內容 */
-      align-items: center; /* 水平置中對齊 */
-      font-family: sans-serif; /* 預設字型 */
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
     }
-
-    canvas { /* 畫布本身 */
-      border: 1px solid #ccc; /* 1 像素寬、實線、淺灰色的邊框 */
-      touch-action: none; /* 禁用預設觸控行為，避免捲動畫面 */
+    canvas {
+      border: 1px solid #ccc;
+      touch-action: none; /* 禁用預設觸控行為 */
       margin-top: 20px;
     }
-
-    #btn-save , #btn-clear {
-      margin: 20px;
-      padding: 10px 20px; /* 內邊距 */
+    #btn-save, #btn-clear {
+      margin: 10px;
+      padding: 10px 20px;
       font-size: 16px;
-      background-color: #4CAF50;       /* 綠色背景 */
-      color: white;                    /* 文字白色 */
-      border: none;                    /* 去除預設邊框 */
-      border-radius: 8px;             /* 圓角按鈕 */
-      cursor: pointer;                /* 滑鼠移過去會變成手指 */
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* 輕微陰影 */
-      transition: background-color 0.3s, transform 0.1s;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-
     #btn-save:hover, #btn-clear:hover {
-      background-color: #45a049; /* hover 時稍微變深 */
+      background-color: #45a049;
     }
-
-    #btn-save:active, #btn-clear:active  {
-      transform: scale(0.97);   /* 按下時微縮小 */
-    }
-
     #size-slider {
       margin: 10px;
     }
   </style>
 </head>
 <body>
-  <h1>模擬書法小遊戲</h1> <!-- 標題 -->
-  <canvas id="canvas" width="300" height="300"></canvas> <!-- 畫布，使用者可書寫 -->
-  <label for="size-slider">筆粗：</label>
-  <input type="range" id="size-slider" min="2" max="20" value="8" />
-  <button id="btn-save">儲存圖片</button> <!-- 儲存圖片的按鈕 -->
-  <button id="btn-clear">清空畫布</button> <!-- 清空畫布的按鈕 -->
+  <h2>毛筆書法模擬</h2>
+  <img src="image\ann.jpg" height="100" width="100" alt="100">
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <label for="size-slider">最大筆粗：</label>
+  <input type="range" id="size-slider" min="2" max="30" value="10">
+  <div>
+    <button id="btn-save">儲存圖片</button>
+    <button id="btn-clear">清空畫布</button>
+  </div>
 
-  <script type="module">
-    // 引入 perfect-freehand 套件中的 getStroke 函式
-    import { getStroke } from "https://cdn.skypack.dev/perfect-freehand";
-
-    // 初始化畫布與變數
-    const canvas = document.getElementById('canvas'); // 取得畫布元素
-    const ctx = canvas.getContext('2d'); // 取得 2D 繪圖上下文
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
     const sizeSlider = document.getElementById('size-slider');
-    let isDrawing = false; // 是否正在書寫
-    let points = []; // 當前筆劃的點
-    let strokes = []; // 所有完成的筆劃
-    let lastTime = 0; // 上一次記錄的時間
-    let lastPos = null; // 上一次座標位置
 
-    // 繪製筆劃函式，會清除畫面並重新畫出所有筆劃
-    function drawStroke(strokeList) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (const s of strokeList) {
-        const path = new Path2D();
-        const outline = getStroke(s.points, {
-          size: s.size,
-          thinning: 0.7,              // 筆鋒擴張程度
-          smoothing: 0.5,             // 路徑平滑度
-          streamline: 0.5,            // 去除抖動用
-          simulatePressure: false,    // 自行模擬壓力
-          easing: t => t * t          // 筆畫粗細分佈，中段粗、前後尖
-        });
+    let isDrawing = false;
+    let lastX = 0, lastY = 0;
 
-        outline.forEach(([x, y], i) => {
-          if (i === 0) path.moveTo(x, y);
-          else path.lineTo(x, y);
-        });
-
-        // 先畫暈邊模糊層
-        ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.filter = 'blur(1.5px)';
-        ctx.fill(path);
-        ctx.restore();
-
-        // 再畫主要筆劃層
-        ctx.save();
-        ctx.globalAlpha = 0.85;
-        ctx.filter = 'none';
-        ctx.fill(path);
-        ctx.restore();
-      }
-    }
-
-    // 使用者按下筆（開始書寫）
     canvas.addEventListener('pointerdown', (e) => {
       isDrawing = true;
-      points = [[e.offsetX, e.offsetY]];
-      lastTime = performance.now();
-      lastPos = [e.offsetX, e.offsetY];
+      [lastX, lastY] = [e.offsetX, e.offsetY];
     });
 
-    // 使用者移動筆（持續書寫）
     canvas.addEventListener('pointermove', (e) => {
       if (!isDrawing) return;
 
-      const now = performance.now();
-      const dt = now - lastTime;
-      const dx = e.offsetX - lastPos[0];
-      const dy = e.offsetY - lastPos[1];
-      const speed = Math.sqrt(dx * dx + dy * dy) / dt; // 移動速度
-      const pressure = Math.max(0.2, Math.min(1, 1 - speed * 2)); // 模擬壓力值
-      const size = parseFloat(sizeSlider.value) * pressure; // 模擬筆壓影響粗細
+      const pressure = e.pressure || 0.5; // 真實筆壓，滑鼠時為 0.5
+      const size = parseFloat(sizeSlider.value) * pressure;
 
-      points.push([e.offsetX, e.offsetY]);
-      drawStroke([...strokes, { points, size }]); // 繪製目前所有筆劃（包含未完成這筆）
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'black';
+      ctx.lineWidth = size;
 
-      lastTime = now;
-      lastPos = [e.offsetX, e.offsetY];
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(e.offsetX, e.offsetY);
+      ctx.stroke();
+
+      [lastX, lastY] = [e.offsetX, e.offsetY];
     });
 
-    // 使用者放開筆（完成筆劃）
-    canvas.addEventListener('pointerup', () => {
-      isDrawing = false;
-      const size = parseFloat(sizeSlider.value);
-      strokes.push({ points, size });
-      points = [];
-    });
+    const stopDraw = () => isDrawing = false;
+    canvas.addEventListener('pointerup', stopDraw);
+    canvas.addEventListener('pointerout', stopDraw);
+    canvas.addEventListener('pointercancel', stopDraw);
 
-    // 點擊儲存圖片按鈕，下載畫布內容為 PNG 圖片
     document.getElementById('btn-save').addEventListener('click', () => {
       const link = document.createElement('a');
-      link.download = 'handwriting.png';
+      link.download = 'calligraphy.png';
       link.href = canvas.toDataURL();
       link.click();
     });
 
-    // 點擊清空畫布按鈕，重設所有筆劃並清空畫面
     document.getElementById('btn-clear').addEventListener('click', () => {
-      strokes = [];
-      points = [];
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     });
   </script>
+  <ul class="button-list"></ul>
+  <li><a href="aaan copy.html">下一頁</a></li>
 </body>
 </html>
